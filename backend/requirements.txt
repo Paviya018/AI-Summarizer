@@ -16,7 +16,7 @@ python-dotenv>=1.0.0
 pymupdf>=1.24.0
 
 # --- OCR ---
-paddlepaddle>=2.6.0
+paddlepaddle==2.6.2
 paddleocr>=2.8.0
 Pillow>=10.0.0
 
@@ -39,3 +39,6 @@ pytest-mock>=3.14.0
 
 # --- Utilities ---
 requests>=2.31.0
+
+# --- Production Server ---
+gunicorn>=22.0.0
