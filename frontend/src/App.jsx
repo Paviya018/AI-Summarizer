@@ -13,6 +13,12 @@ import {
 } from 'lucide-react'
 import './App.css'
 
+const API_BASE_URL = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
+
+function apiUrl(path) {
+  return `${API_BASE_URL}${path}`
+}
+
 async function readApiResponse(response) {
   const body = await response.text()
   if (!body.trim()) {
@@ -65,12 +71,12 @@ export default function App() {
 
   // Check backend health on mount
   useEffect(() => {
-    fetch('/api/health')
+    fetch(apiUrl('/api/health'))
       .then(readApiResponse)
       .then((data) => setHealth(data))
       .catch((err) => {
         console.error('Failed to reach backend:', err)
-        setError('Cannot connect to backend server. Make sure Flask is running on port 5000.')
+        setError('Cannot connect to the backend server. Check the deployed backend URL and Render logs.')
       })
   }, [])
 
@@ -94,7 +100,7 @@ export default function App() {
     formData.append('ocr_language', ocrLanguage)
 
     try {
-      const res = await fetch('/api/documents/upload', {
+      const res = await fetch(apiUrl('/api/documents/upload'), {
         method: 'POST',
         body: formData,
       })
@@ -129,7 +135,7 @@ export default function App() {
     setAudioUrl('')
 
     try {
-      const res = await fetch('/api/documents/summarize', {
+      const res = await fetch(apiUrl('/api/documents/summarize'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -159,7 +165,7 @@ export default function App() {
     setError('')
 
     try {
-      const res = await fetch('/api/documents/audio', {
+      const res = await fetch(apiUrl('/api/documents/audio'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -174,7 +180,7 @@ export default function App() {
         throw new Error(data.error || 'Failed to generate audio.')
       }
 
-      setAudioUrl(data.audio_url)
+      setAudioUrl(apiUrl(data.audio_url))
       setAudioFilename(data.filename)
     } catch (err) {
       setError(err.message)
@@ -191,7 +197,7 @@ export default function App() {
     setFullAudioData(null)
 
     try {
-      const res = await fetch('/api/documents/full-audio', {
+      const res = await fetch(apiUrl('/api/documents/full-audio'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -205,7 +211,7 @@ export default function App() {
         throw new Error(data.error || 'Failed to generate full document audio.')
       }
 
-      setFullAudioData(data)
+      setFullAudioData({ ...data, audio_url: apiUrl(data.audio_url) })
     } catch (err) {
       setError(err.message)
     } finally {
