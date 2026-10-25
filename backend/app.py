@@ -31,6 +31,14 @@ def create_app() -> Flask:
     # Register Blueprints
     app.register_blueprint(document_bp, url_prefix="/api/documents")
 
+    @app.route("/", methods=["GET"])
+    def home():
+        return jsonify({
+            "service": "AI Document Summarizer API",
+            "status": "running",
+            "health_url": "/api/health",
+        }), 200
+
     @app.route("/api/health", methods=["GET"])
     def health():
         warnings = config.validate_config()
