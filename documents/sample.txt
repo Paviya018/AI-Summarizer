@@ -1,0 +1,3 @@
+Artificial Intelligence is a branch of computer science.
+It focuses on building systems that can perform tasks
+that normally require human intelligence.
