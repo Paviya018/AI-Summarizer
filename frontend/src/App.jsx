@@ -40,7 +40,7 @@ async function readApiResponse(response) {
 export default function App() {
   // App state
   const [health, setHealth] = useState(null)
-  const [ocrLanguage, setOcrLanguage] = useState('en')
+  const [ocrLanguage, setOcrLanguage] = useState('')
   const [isUploading, setIsUploading] = useState(false)
   const [uploadData, setUploadData] = useState(null)
   const [error, setError] = useState('')
@@ -83,6 +83,12 @@ export default function App() {
   // File drop / select handler
   const handleFileChange = (selectedFile) => {
     if (!selectedFile) return
+    const extension = selectedFile.name.split('.').pop()?.toLowerCase()
+    if (['pdf', 'png', 'jpg', 'jpeg'].includes(extension) && !ocrLanguage) {
+      setError('Select the text language before uploading a PDF or image.')
+      return
+    }
+
     setError('')
     setUploadData(null)
     setSummaryData(null)
@@ -97,7 +103,9 @@ export default function App() {
     setError('')
     const formData = new FormData()
     formData.append('file', docFile)
-    formData.append('ocr_language', ocrLanguage)
+    if (ocrLanguage) {
+      formData.append('ocr_language', ocrLanguage)
+    }
 
     try {
       const res = await fetch(apiUrl('/api/documents/upload'), {
@@ -275,13 +283,14 @@ export default function App() {
         </h2>
 
         <div className="form-group" style={{ marginBottom: '1rem' }}>
-          <label htmlFor="ocr-language">Text language in image or scanned PDF</label>
+          <label htmlFor="ocr-language">Text language in PDF or image</label>
           <select
             id="ocr-language"
             value={ocrLanguage}
             onChange={(e) => setOcrLanguage(e.target.value)}
             disabled={isUploading}
           >
+            <option value="">Select text language for OCR</option>
             {Object.entries(health?.ocr_languages || {
               en: 'English',
               latin: 'French, German, or Spanish (Latin script)',
@@ -316,7 +325,7 @@ export default function App() {
           />
           <Upload className="dropzone-icon" />
           <h3>Drag and drop your document here, or click to browse</h3>
-          <p>Supports Digital & Scanned PDFs (with OCR), DOCX, TXT, PNG, JPG (up to 20MB). Select the image text language before uploading.</p>
+          <p>Supports Digital & Scanned PDFs (with OCR), DOCX, TXT, PNG, JPG (up to 20MB). Select the text language before uploading a PDF or image.</p>
         </div>
 
         {isUploading && (

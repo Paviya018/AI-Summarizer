@@ -44,6 +44,12 @@ def summarize_document(
             "from_cache": 0,
         }
 
+    supported_languages = {
+        language.lower() for language in config.SUPPORTED_OUTPUT_LANGUAGES
+    }
+    if target_language.strip().lower() not in supported_languages:
+        raise ValueError(f"Unsupported target language: {target_language}")
+
     if clear_cache:
         clear_summaries()
 
@@ -115,7 +121,9 @@ Rules:
 - Merge all sections into ONE coherent response.
 - Remove repetition.
 - Preserve key findings, numbers, and conclusions.
-- Return only the summary text in English.
+- Write the summary in English.
+- Use only information in the section summaries; do not add or infer facts.
+- Return only the summary text.
 
 Section summaries:
 {combined}
@@ -132,17 +140,16 @@ Section summaries:
                 whole_document_text = "\n\n".join(chunk_summaries)
                 base_summary = mock_summarize(whole_document_text, length=summary_length)
 
-    # 3. Translate to requested target language
+    # Keep summarization in English, then translate the completed summary once.
     final_text = base_summary
     if target_language.lower() != "english":
-        logger.info("Translating full summary to %s...", target_language)
+        logger.info("Translating summary to %s...", target_language)
         translated = translate_text(
             base_summary,
             target_language=target_language,
             source_language="English",
         )
-        if translated and translated.strip():
-            final_text = translated
+        final_text = translated
 
     return {
         "summary": final_text,

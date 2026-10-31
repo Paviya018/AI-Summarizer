@@ -50,6 +50,10 @@ def create_app() -> Flask:
             "status": "healthy",
             "model": provider_models.get(config.AI_PROVIDER, config.GEMINI_MODEL),
             "provider": config.AI_PROVIDER,
+            "translation_provider": {
+                "gemini": "Gemini",
+                "nllb": "NLLB",
+            }.get(config.TRANSLATION_PROVIDER, config.TRANSLATION_PROVIDER),
             "configured_providers": [
                 name
                 for name, key, placeholder in (

@@ -169,8 +169,13 @@ def generate_ai_content(prompt: str):
 
 
 def generate_gemini_content(prompt: str):
-    """Backward-compatible alias for existing callers."""
-    return generate_ai_content(prompt)
+    """Generate content with Gemini directly, without provider failover."""
+    client = _get_client()
+    if client is None:
+        raise RuntimeError(
+            "Gemini translation requires GEMINI_API_KEY in backend/.env."
+        )
+    return _generate_content_with_retry(client, config.GEMINI_MODEL, prompt)
 
 
 def _mock_result(text: str, label: str = "MOCK SUMMARY") -> dict:
@@ -249,6 +254,8 @@ Output language: Write the entire summary in {target_language}.
 
 Rules:
 - Do NOT invent facts, dates, or numbers that are not in the source text.
+- Include only information explicitly supported by the source; do not add unrelated topics, organizations, dates, results, or recommendations.
+- Do not pad the summary to meet a sentence count. Use fewer sentences when the source does not support a longer summary.
 - Preserve all technical terms, proper names, dates, and numerical values exactly.
 - Do not repeat the same information.
 - Do not add a title or heading to your response.

@@ -37,6 +37,12 @@ OLLAMA_BASE_URL: str = os.getenv(
 ).rstrip("/")
 OLLAMA_MODEL: str = os.getenv("OLLAMA_MODEL", "qwen3:1.7b")
 AI_PROVIDER: str = os.getenv("AI_PROVIDER", "gemini").strip().lower()
+TRANSLATION_PROVIDER: str = os.getenv(
+    "TRANSLATION_PROVIDER", "gemini"
+).strip().lower()
+NLLB_MODEL: str = os.getenv(
+    "NLLB_MODEL", "facebook/nllb-200-distilled-600M"
+).strip()
 
 # Maximum characters sent in a single AI API call.
 MAX_CHARS_PER_CHUNK: int = 8_000
@@ -58,7 +64,7 @@ USE_MOCK_SUMMARIZER: bool = (
 # ------------------------------------------------------------------ #
 ALLOWED_EXTENSIONS: set = {".pdf", ".docx", ".txt", ".jpg", ".jpeg", ".png"}
 
-# OCR language selected for images and scanned PDFs.
+# OCR models used for automatic recognition of images and scanned PDFs.
 OCR_LANGUAGE_OPTIONS: dict[str, str] = {
     "en": "English",
     "latin": "French, German, or Spanish (Latin script)",

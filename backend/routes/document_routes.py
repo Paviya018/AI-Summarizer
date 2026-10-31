@@ -42,8 +42,10 @@ def upload_document():
     if not is_valid:
         return jsonify({"success": False, "error": error_msg}), 400
 
-    ocr_language = request.form.get("ocr_language", "en").strip().lower()
-    if ocr_language not in config.OCR_LANGUAGE_OPTIONS:
+    ocr_language = request.form.get("ocr_language")
+    if ocr_language:
+        ocr_language = ocr_language.strip().lower()
+    if ocr_language and ocr_language not in config.OCR_LANGUAGE_OPTIONS:
         return jsonify({
             "success": False,
             "error": "Unsupported OCR language. Choose one of: "
@@ -167,6 +169,11 @@ def summarize_doc():
 
     except Exception as e:
         logger.exception("Summarization endpoint error")
+        if str(e).startswith("Gemini quota limit exceeded."):
+            return jsonify({
+                "success": False,
+                "error": str(e),
+            }), 429
         return jsonify({
             "success": False,
             "error": f"Internal summarization error: {str(e)}"

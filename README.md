@@ -17,16 +17,18 @@ An end-to-end AI document intelligence platform that extracts text from digital 
   - Respects paragraph and sentence boundaries (never severs sentences mid-thought).
   - Contextual overlap between chunks.
 - **AI-Powered Summarization with local Ollama or cloud provider failover**:
-  - Local-only mode uses Ollama and Qwen3 (`qwen3:1.7b`) for summarization and translation without sending document text to cloud providers.
-  - Local inference disables Qwen3's extended thinking and limits repetitive/overlong generations. Full-document translation still takes time on CPU-only hardware.
-  - Set `AI_PROVIDER=ollama` in `backend/.env`; local mode does not fall back to paid cloud APIs.
+  - Ollama and Qwen3 (`qwen3:1.7b`) can summarize locally. Summary generation can also use Gemini and Ollama provider failover.
+  - Local summarization disables Qwen3's extended thinking and limits repetitive/overlong generations.
+  - Set `AI_PROVIDER=ollama` in `backend/.env` for local-only summarization; summaries do not fall back to paid cloud APIs.
   - Gemini is used first (`gemini-3.8-flash`) and Ollama (`qwen3:1.7b`) is used if Gemini fails.
   - Configure the Gemini API key in `backend/.env`, or set `AI_PROVIDER=ollama` for local-only inference.
   - Configurable length: **Short** (2–3 sentences), **Medium** (1 paragraph), or **Detailed**.
-  - Cross-language summarization (e.g. upload English document, generate Tamil summary).
-  - Summary and full-document translation use the configured providers and fail over between them when a provider fails.
+  - Summaries are generated in English first, then translated to the selected output language.
+  - Summary and full-document translation use Gemini by default. Set `TRANSLATION_PROVIDER=nllb` to use local NLLB translation instead.
+  - NLLB translation runs locally with the `facebook/nllb-200-distilled-600M` model and supports the application's output languages. The model is downloaded the first time it is used.
+  - Gemini translation requires a configured Gemini API key, even when `AI_PROVIDER=ollama` is selected for local summarization.
   - **Checkpoint resumption**: Per-chunk checkpointing ensures that interrupted jobs resume without repeating processed sections.
-  - **Safe mock fallback**: Built-in mock mode keeps the pipeline testable without consuming API quota.
+  - **Safe mock fallback**: Built-in mock mode avoids AI calls for summarization; non-English translation still uses Gemini.
 - **Multilingual Audio Generation (TTS)**:
   - Generates speech with Microsoft Edge neural voices selected for the requested language.
   - In-browser HTML5 audio player and one-click MP3 download.
@@ -57,6 +59,7 @@ AI-Document-Summarizer/
 │   │   ├── language_service.py    # Lingua language detector
 │   │   ├── chunk_service.py       # Smart sentence-boundary chunking
 │   │   ├── summarizer_service.py  # Gemini/Ollama summarizer failover with mock fallback
+│   │   ├── translation_service.py # Gemini/NLLB translation integration
 │   │   ├── summary_storage.py     # Checkpoint save/load/clear for chunk summaries
 │   │   ├── document_summarizer.py # Document summarization orchestrator
 │   │   ├── mock_summarizer.py     # Zero-quota development summarizer
@@ -100,12 +103,15 @@ python -m venv venv
 # Install dependencies
 pip install -r requirements.txt
 
+# Optional: install local NLLB translation dependencies
+pip install -r requirements-nllb.txt
+
 # Configure environment
 cp .env.example .env
-# For local-only AI, install Ollama, pull qwen3:1.7b, and set AI_PROVIDER=ollama.
-# Local mode does not require cloud API keys and never sends text to cloud providers.
-# For cloud mode, add one or both provider API keys.
-# Keep USE_MOCK_SUMMARIZER=true to avoid external API calls.
+# For local summarization, install Ollama, pull qwen3:1.7b, and set AI_PROVIDER=ollama.
+# Translation uses Gemini by default; set TRANSLATION_PROVIDER=nllb for local NLLB.
+# For Gemini summarization, add GEMINI_API_KEY.
+# Set USE_MOCK_SUMMARIZER=true to avoid AI calls for summarization.
 ```
 
 ### 3. Frontend Setup
@@ -133,7 +139,7 @@ npm run dev
 ```
 > Running at **`http://localhost:5173`**
 
-For images and scanned PDFs, select the language used in the source image before uploading. OCR is less reliable for blurry, noisy, rotated, or handwritten text.
+Images and scanned PDFs are OCR-processed automatically by trying the supported text-recognition models and selecting the most confident, script-matching result. This can take longer than processing digital PDFs, DOCX, and TXT files. OCR is less reliable for blurry, noisy, rotated, or handwritten text.
 
 ---
 

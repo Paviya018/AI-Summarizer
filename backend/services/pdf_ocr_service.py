@@ -3,7 +3,7 @@ import os
 from services.ocr_service import extract_text_from_image
 
 
-def extract_text_from_scanned_pdf(file_path, ocr_language="en"):
+def extract_text_from_scanned_pdf(file_path, ocr_language=None):
 
     document = fitz.open(file_path)
 

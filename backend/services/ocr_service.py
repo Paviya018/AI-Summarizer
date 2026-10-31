@@ -1,4 +1,5 @@
 from threading import Lock
+import unicodedata
 
 import config
 from paddleocr import PaddleOCR
@@ -17,6 +18,15 @@ _OCR_MODELS = {
 _ocr = None
 _ocr_language = None
 _ocr_lock = Lock()
+_SCRIPT_NAMES = {
+    "en": ("LATIN",),
+    "latin": ("LATIN",),
+    "el": ("GREEK",),
+    "ta": ("TAMIL",),
+    "te": ("TELUGU",),
+    "devanagari": ("DEVANAGARI",),
+    "ka": ("KANNADA",),
+}
 
 
 def _get_ocr(language):
@@ -39,20 +49,58 @@ def _get_ocr(language):
     return _ocr
 
 
-def extract_text_from_image(file_path, language="en"):
+def _recognize_text(file_path, language):
+    result = _get_ocr(language).predict(file_path)
+    extracted_text = []
+    scores = []
+
+    for res in result:
+        data = res.json
+        if "res" not in data:
+            continue
+
+        recognition = data["res"]
+        for text in recognition.get("rec_texts", []):
+            if text.strip():
+                extracted_text.append(text)
+
+        scores.extend(recognition.get("rec_scores", []))
+
+    text = "\n".join(extracted_text)
+    confidence = sum(scores) / len(scores) if scores else 1
+    return text, confidence
+
+
+def _script_match(text, language):
+    letters = [
+        unicodedata.name(char, "")
+        for char in text
+        if char.isalpha()
+    ]
+    if not letters:
+        return 0
+
+    matching_letters = sum(
+        any(name.startswith(script) for script in _SCRIPT_NAMES[language])
+        for name in letters
+    )
+    return matching_letters / len(letters)
+
+
+def extract_text_from_image(file_path, language=None):
     with _ocr_lock:
-        result = _get_ocr(language).predict(file_path)
+        if language is not None:
+            return _recognize_text(file_path, language)[0]
 
-        extracted_text = []
+        best_text = ""
+        best_score = -1
+        for candidate_language in _OCR_MODELS:
+            text, confidence = _recognize_text(file_path, candidate_language)
+            score = confidence * (
+                0.1 + 0.9 * _script_match(text, candidate_language)
+            )
+            if text and score > best_score:
+                best_text = text
+                best_score = score
 
-        for res in result:
-            data = res.json
-
-            if "res" in data:
-                texts = data["res"].get("rec_texts", [])
-
-                for text in texts:
-                    if text.strip():
-                        extracted_text.append(text)
-
-        return "\n".join(extracted_text)
+        return best_text

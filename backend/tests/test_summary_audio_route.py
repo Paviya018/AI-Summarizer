@@ -3,6 +3,43 @@ from routes import document_routes
 from services import audio_service
 
 
+def test_summarize_route_reports_gemini_quota_reset_time(monkeypatch):
+    doc_id = "gemini-quota-error-test"
+    monkeypatch.setitem(
+        document_routes.DOC_CACHE,
+        doc_id,
+        {
+            "chunks": ["A source document in English."],
+            "detected_language": "ENGLISH",
+        },
+    )
+    monkeypatch.setattr(
+        document_routes,
+        "summarize_document",
+        lambda **kwargs: (_ for _ in ()).throw(
+            RuntimeError(
+                "Gemini quota limit exceeded. Please try again after "
+                "14 hours, 35 minutes."
+            )
+        ),
+    )
+
+    with app.test_client() as client:
+        response = client.post(
+            "/api/documents/summarize",
+            json={"doc_id": doc_id, "target_language": "Tamil"},
+        )
+
+    assert response.status_code == 429
+    assert response.get_json() == {
+        "success": False,
+        "error": (
+            "Gemini quota limit exceeded. Please try again after "
+            "14 hours, 35 minutes."
+        ),
+    }
+
+
 def test_translated_summary_is_the_text_sent_to_tamil_voice(monkeypatch):
     doc_id = "translated-summary-audio-test"
     monkeypatch.setitem(

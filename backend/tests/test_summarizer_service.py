@@ -40,6 +40,61 @@ def test_summarize_retries_temporary_service_unavailable(monkeypatch):
     assert models.calls == 3
 
 
+def test_gemini_generation_does_not_use_ollama_failover(monkeypatch):
+    captured = {}
+
+    class FakeModels:
+        def generate_content(self, model, contents):
+            captured.update(model=model, contents=contents)
+            return SimpleNamespace(text="Translated response.")
+
+    monkeypatch.setattr(
+        summarizer_service,
+        "_get_client",
+        lambda: SimpleNamespace(models=FakeModels()),
+    )
+    monkeypatch.setattr(summarizer_service.config, "AI_PROVIDER", "ollama")
+    monkeypatch.setattr(summarizer_service.config, "GEMINI_MODEL", "test-gemini")
+    monkeypatch.setattr(
+        summarizer_service,
+        "_generate_ollama_content",
+        lambda prompt: (_ for _ in ()).throw(
+            AssertionError("Translation must not use Ollama.")
+        ),
+    )
+
+    result = summarizer_service.generate_gemini_content("Translate this.")
+
+    assert result.text == "Translated response."
+    assert captured == {
+        "model": "test-gemini",
+        "contents": "Translate this.",
+    }
+
+
+def test_summary_prompt_preserves_selected_language_without_padding(monkeypatch):
+    prompts = []
+    monkeypatch.setattr(summarizer_service.config, "USE_MOCK_SUMMARIZER", False)
+    monkeypatch.setattr(summarizer_service, "_configured_providers", lambda: ["ollama"])
+    monkeypatch.setattr(
+        summarizer_service,
+        "generate_ai_content",
+        lambda prompt: prompts.append(prompt)
+        or SimpleNamespace(text="செயற்கை நுண்ணறிவு கணினி அறிவியலின் ஒரு பிரிவாகும்."),
+    )
+
+    result = summarizer_service.summarize_text(
+        "Artificial intelligence is a branch of computer science.",
+        summary_length="medium",
+        target_language="Tamil",
+    )
+
+    assert result["summary"].startswith("செயற்கை நுண்ணறிவு")
+    assert "Output language: Write the entire summary in Tamil." in prompts[0]
+    assert "Do not pad the summary to meet a sentence count." in prompts[0]
+    assert "Include only information explicitly supported by the source" in prompts[0]
+
+
 def test_summarize_falls_back_to_ollama_when_gemini_fails(monkeypatch):
     monkeypatch.setattr(summarizer_service.config, "USE_MOCK_SUMMARIZER", False)
     monkeypatch.setattr(summarizer_service.config, "AI_PROVIDER", "gemini")
@@ -116,5 +171,3 @@ def test_ollama_request_uses_local_generate_api(monkeypatch):
         "repeat_penalty": 1.2,
         "repeat_last_n": 128,
     }
-
-

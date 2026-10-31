@@ -7,7 +7,7 @@ from services.txt_service import extract_text_from_txt
 from services.ocr_service import extract_text_from_image
 
 
-def extract_text(file_path, ocr_language="en"):
+def extract_text(file_path, ocr_language=None):
 
     extension = os.path.splitext(file_path)[1].lower()
 

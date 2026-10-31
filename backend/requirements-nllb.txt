@@ -1,0 +1,6 @@
+-r requirements.txt
+
+# Optional local NLLB translation dependencies.
+torch>=2.2.0
+transformers>=4.46.0
+sentencepiece>=0.2.0
